@@ -39,8 +39,8 @@ typedef enum
   SD_SDIO_FUNCTION_FAILED   =(32),
   SD_SDIO_UNKNOWN_FUNCTION  =(33),
   
-  /********Standard error defines********/
   
+  /********Standard error defines********/
   SD_INTERNAL_ERROR,
   SD_NOT_CONFIGURED,
   SD_REQUEST_PENDING,
@@ -49,4 +49,28 @@ typedef enum
   SD_UNSUPPORTED_FEATURE,
   SD_UNSUPPORTED_HW,
   SD_ERROR,
-  SD_OK = 0}SD_ERROR;
+  SD_OK = 0
+}SD_ERROR;
+
+  
+  /********SDIO Transfer State********/
+typedef enum
+{
+  SD_Transfer_OK      = 0,
+  SD_Transfer_Busy    =1,
+  SD_Transfer_Error
+}SDTransferState;
+
+  
+  /********SD Card States********/
+typedef enum
+{
+  SD_CARD_READY               =((uint32_t)0x00000001),
+  SD_CARD_IDENTIFICATION      =((uint32_t)0x00000002),
+  SD_CARD_STANDBY             =((uint32_t)0x00000003),
+  SD_CARD_TRANSFER            =((uint32_t)0x00000004),
+  SD_CARD_SENDING             =((uint32_t)0x00000005),
+}
+  
+}
+  
