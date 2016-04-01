@@ -56,9 +56,9 @@ typedef enum
   /********SDIO Transfer State********/
 typedef enum
 {
-  SD_Transfer_OK      = 0,
-  SD_Transfer_Busy    =1,
-  SD_Transfer_Error
+  SD_TRANSFER_OK      = 0,
+  SD_TRANSFER_Busy    =1,
+  SD_TRANSFER_Error
 }SDTransferState;
 
   
@@ -70,7 +70,28 @@ typedef enum
   SD_CARD_STANDBY             =((uint32_t)0x00000003),
   SD_CARD_TRANSFER            =((uint32_t)0x00000004),
   SD_CARD_SENDING             =((uint32_t)0x00000005),
-}
-  
+  SD_CARD_RECEIVING           =((uint32_t)0x00000006),
+  SD_CARD_PROGRAMMING         =((uint32_t)0x00000007),
+  SD_CARD_DISCONNECTED        =((uint32_t)0x00000008),
+  SD_CARD_ERROR               =((uint32_t)0x000000FF),
+}SDCardState;
+
+
+  /********SD Card Specific Data: CSD Register********/
+typedef struct
+{
+  __IO uint8_t  CSDStruct;
+  __IO uint8_t  SysSpecVersion;
+  __IO uint8_t  Reserved1;
+  __IO uint8_t  TAAC;
+  __IO uint8_t  NSAC;
+  __IO uint8_t  MaxBusClkFrec;
+  __IO uint16_t  CardComdClasses;
+  __IO uint8_t  RDBlockLen;
+  __IO uint8_t  PartBlockRead;
+  __IO uint8_t  WrBlockMisalign;
+  __IO uint8_t  RdBlockMisalign;
+  __IO uint8_t  DSRImpl;
+  __IO uint8_t  Reserved2;
 }
   
