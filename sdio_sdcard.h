@@ -93,5 +93,29 @@ typedef struct
   __IO uint8_t  RdBlockMisalign;
   __IO uint8_t  DSRImpl;
   __IO uint8_t  Reserved2;
+  __IO uint32_t DeviceSize;
+  __IO uint8_t  MaxRdCurrentVDMMin;
+  __IO uint8_t  MaxRdCurrentVDMMax;
+  __IO uint8_t  MaxWrCurrentVDMMin;
+  __IO uint8_t  MaxWrCurrentVDMMax;
+  __IO uint8_t  DeviceSizeMul;
+  __IO uint8_t  EraseGrSize;
+  __IO uint8_t  EraseGrMul;
+  __IO uint8_t  WrProtectGrSize;
+  __IO uint8_t  WrProtectGrEnable;
+  __IO uint8_t  ManDeflECC;
+  __IO uint8_t  WrSpeedFact;
+  __IO uint8_t  MaxWrBlockLen;
+  __IO uint8_t  Reserved3;
+  __IO uint8_t  ContentProtectAppli;
+  __IO uint8_t  FileFormatGrouop;
+  __IO uint8_t  CopyFlag;
+  __IO uint8_t  PermWrProtect;
+  __IO uint8_t  TempWrProtect;
+  __IO uint8_t  FileFormat;
+  __IO uint8_t  ECC;
+  __IO uint8_t  CSD_CRC;
+  __IO uint8_t  Reserved4;
+}SD_CSD;
 }
   
