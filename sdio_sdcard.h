@@ -250,4 +250,12 @@ typedef struct
 #define SD_DMA_MODE ((uint8_t)0x00000000)
 /* #define SD_POLLING_MODE ((uint8_t)0x00000002)*/
 
+
+/*SD detection on its memory slot*/
+#define SD_PRESENT ((uint8_t)0x01)
+#define SD_NOT_PRESENT ((uint8_t)0x00)
+
+
+/*Supported SD Memory Cards*/
+#define SDIO_STD_CAPACITY_SD_CARD_V1_1
   
