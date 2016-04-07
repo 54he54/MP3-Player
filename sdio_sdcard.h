@@ -161,4 +161,50 @@ typedef struct
   uint16_t  RCA;
   uint8_t   CardType;
 }SD_CardInfo;
+
+
+
+
+#define     SDIO_FIOF_ADDRESS       ((uint32_t)0x40018080)
+
+/********SDIO Intialization Frequency (400KHZ max)********/
+#define SDIO_INIT_CLK_DIV           ((uint8_t)0xB2)
+
+/********SDIO Data Transfer Frequency (25MHz max)********/
+/********SDIOCLK = HCLK,SDIO_CK = HCLK/(2 + SDIO_TRANSFER_CLK_DIV)******/
+#define SDIO_TRANSFER_CLK_DIV       ((uint8_t0x01))
+
+/******SDIO Commands Index******/
+#define SD_CMD_GO_IDLE_STATE                ((uint8_t)0)
+#define SD_CMD_SEND_OP_COND                 ((uint8_t)1)
+#define SD_CMD_ALL_SEND_CID                 ((uint8_t)2)
+#define SD_CMD_SET_REL_ADDR                 ((uint8_t)3)
+#define SD_CMD_SET_DSR                      ((uint8_t)4)
+#define SD_CMD_SDIO_SEN_OP_COND             ((uint8_t)5)
+#define SD_CMD_HS_SWITCH                    ((uint8_t)6)
+#define SD_CMD_SEL_DESEL_CARD               ((uint8_t)7)
+#define SD_CMD_HS_SEND_EXT_CSD              ((uint8_t)8)
+#define SD_CMD_SEND_CSD                     ((uint8_t)9)
+#define SD_CMD_SEND_CID                     ((uint8_t)10)
+#define SD_CMD_READ_DATA_UNTIL_STOP         ((uint8_t)11)/********SD Card Does't Support It********/
+#define SD_CMD_STOP_TRANSMISSION            ((uint8_t)12)
+#define SD_CMD_SEND_STATUS                  ((uint8_t)13)
+#define SD_CMD_HS_BUSTEST_READ              ((uint8_t)14)
+#define SD_CMD_GO_INACTIVE_STATE            ((uint8_t)15)
+#define SD_CMD_SET_BLOCKLEN                 ((uint8_t)16)
+#define SD_CMD_READ_SINGLE_BLOCK            ((uint8_t)17)
+#define SD_CMD_READ_MUTI_BLOCK              ((uint8_t)18)
+#define SD_CMD_HS_BUSTEST_WRITE             ((uint8_t)19)
+#define SD_CMD_WRITE_DAT_UNTIL_STOP         ((uint8_t)20)/********SD Card Does't Support It********/
+#define SD_CMD_SET_BLOCK_COUNT              ((uint8_t)21)
+#define SD_CMD_WRITE_SINGLE_BLOCK ((uint8_t)22)
+#define SD_CMD_WRITE_MULT_BLOCK ((uint8_t)23)
+#define SD_CMD_PROG_CID ((uint8_t)24)
+#define SD_CMD_PROG_CSD ((uint8_t)25)
+#define SD_CMD_SET_WRITE_PORT ((uint8_t)26)
+#define SD_CMD_CLR_WRITE_PORT ((uint8_t)27)
+#define SD_CMD_SEND_WRITE_PORT ((uint8_t)28)
+#define SD_CMD_SD_ERASE_GRP_START ((uint8_t)29)
+#define SD_CMD_
+
   
