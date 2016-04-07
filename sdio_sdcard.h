@@ -196,15 +196,58 @@ typedef struct
 #define SD_CMD_READ_MUTI_BLOCK              ((uint8_t)18)
 #define SD_CMD_HS_BUSTEST_WRITE             ((uint8_t)19)
 #define SD_CMD_WRITE_DAT_UNTIL_STOP         ((uint8_t)20)/********SD Card Does't Support It********/
-#define SD_CMD_SET_BLOCK_COUNT              ((uint8_t)21)
-#define SD_CMD_WRITE_SINGLE_BLOCK ((uint8_t)22)
-#define SD_CMD_WRITE_MULT_BLOCK ((uint8_t)23)
-#define SD_CMD_PROG_CID ((uint8_t)24)
-#define SD_CMD_PROG_CSD ((uint8_t)25)
-#define SD_CMD_SET_WRITE_PORT ((uint8_t)26)
-#define SD_CMD_CLR_WRITE_PORT ((uint8_t)27)
-#define SD_CMD_SEND_WRITE_PORT ((uint8_t)28)
-#define SD_CMD_SD_ERASE_GRP_START ((uint8_t)29)
-#define SD_CMD_
+#define SD_CMD_SET_BLOCK_COUNT              ((uint8_t)23)
+#define SD_CMD_WRITE_SINGLE_BLOCK ((uint8_t)24)
+#define SD_CMD_WRITE_MULT_BLOCK ((uint8_t)25)
+#define SD_CMD_PROG_CID ((uint8_t)26)
+#define SD_CMD_PROG_CSD ((uint8_t)27)
+#define SD_CMD_SET_WRITE_PORT ((uint8_t)28)
+#define SD_CMD_CLR_WRITE_PORT ((uint8_t)29)
+#define SD_CMD_SEND_WRITE_PORT ((uint8_t)30)
+#define SD_CMD_SD_ERASE_GRP_START ((uint8_t)32)
+#define SD_CMD_SD_ERASE_GRP_END ((uint8_t)33)
+#define SD_CMD_ERASE_GRP_START ((uint8_t)35)
+#define SD_CMD_ERASE_GRP_END ((uint8_t)36)
+#define SD_CMD_ERASE ((uint8_t)38)
+#define SD_CMD_FAST_IO ((uint8_t)39)/********SD Card Does't Support It********/
+#define SD_CMD_GO_IRQ_STATE ((uint8_t)40)/********SD Card Does't Support It********/
+#define SD_CMD_LOCK_UNLOCK ((uint8_t)42)
+#define SD_CMD_APP_CMD ((uint8_t)55)
+#define SD_CMD_GEN_CMD ((uint8_t)56)
+#define SD_CMD_NO_CMD ((uint8_t)64)
+
+
+/*Following cmooands are SD Card Specific commands.
+ *SDIO_APP_CMD :CMD55 should be sent before sending these commands.
+ */
+#define SD_CMD_APP_SD_SET_BUSWIDTH  ((uint8_t)6)  /*For SD Card Only*/
+#define SD_CMD_SD_APP_STATUS  ((uint8_t)13)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SEND_NUM_WRITE_BLOCKS ((uint8_t)22)/*For SD Card Only*/
+#define SD_CMD_SD_APP_OP_COND ((uint8_t)41)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SET_CLR_CARD_DETECT ((uint8_t)42)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SEND_SCR ((uint8_t)51)/*For SD Card Only*/
+#define SD_CMD_SDIO_RW_DIRECT ((uint8_t)52)/*For SD Card Only*/
+#define SD_CMD_SDIO_RW_EXTENDED ((uint8_t)53)/*For SD Card Only*/
+
+
+/*Following commands are SD Card Specific Security commands.
+ *SDIO_APP_CMD should be sent before sending these commands.
+ */
+#define SD_CMD_SD_APP_GET_MKB ((uint8_t)43)/*For SD Card Only*/
+#define SD_CMD_SD_APP_GET_MID ((uint8_t)44)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SET_CER_RN1 (uint8_t)45)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SET_CER_RN2 ((uint8_t)46)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SET_CER_RES2 ((uint8_t)47)/*For SD Card Only*/
+#define SD_CMD_SD_APP_GET_CER_RES1 ((uint8_t)48)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SECURE_READ_MULTIPLE_BLOCK ((uint8_t)18)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SECURE_WRITE_MULTIPLE_BLOCK ((uint8_t)25)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SECURE_ERASE ((uint8_t)38)/*For SD Card Only*/
+#define SD_CMD_SD_APP_CHANGE_SECURE_AREA ((uint8_t)49)/*For SD Card Only*/
+#define SD_CMD_SD_APP_SECURE_WRITE_MKB ((uint8_t)48)/*For SD Card Only*/
+
+
+/*Uncomment The Following line to select the SDIO Data transfer mode*/
+#define SD_DMA_MODE ((uint8_t)0x00000000)
+/* #define SD_POLLING_MODE ((uint8_t)0x00000002)*/
 
   
