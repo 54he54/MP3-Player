@@ -257,5 +257,48 @@ typedef struct
 
 
 /*Supported SD Memory Cards*/
-#define SDIO_STD_CAPACITY_SD_CARD_V1_1
+#define SDIO_STD_CAPACITY_SD_CARD_V1_1    ((uint32_t)0x00000000)
+#define SDIO_STD_CAPACITY_SD_CARD_V2_0    ((uint32_t)0x00000001)
+#define SDIO_HIGH_CAPACITY_SD_CARD        ((uint32_t)0x00000002)
+#define SDIO_MULTIMEDIA_CARD              ((uint32_t)0x00000003)
+#define SDIO_SECURE_DIGITAL_IO_CARD       ((uint32_t)0x00000004)
+#define SDIO_HIGH_SPEED_MULTIMEDIA_CARD   ((uint32_t)0x00000005)
+#define SDIO_SECURE_DIGITAL_IO_COMBO_CARD ((uint32_t)0x00000006)
+#define SDIO_HIGH_CAPACITY_MMC_CARD       ((uint32_t)0x00000007)
+
+
+/*Exported Functions*******************************************************/
+void SD_DeInit(void);
+SD_Error SD_Init(void);
+SDTransferState SD_GetStatus(void)
+SDCardState SD_GetState(void);
+uint8_t SD_Detect(void);
+SD_Error SD_PowerON(void);
+SD_Error SD_PowerOFF(void);
+SD_Error SD_InitializeCards(void);
+SD_Error SD_GetCardInfo(SD_CardInfo *cardinfo);
+SD_Error SD_GetCardStatus(SD_CardStatus *cardstatus)
+SD_Error SD_EnableWideBusOperation(uint32_t WideMode);
+SD_Error SD_SelectDeselect(uint32_t addr);
+SD_Error SD_ReadBlock(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize);
+SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize, uint32_t NumberOfBlocks);
+SD_Error SD_WriteBlock(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSize);
+SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32 WriteAddr, uint16_t BlockSize, uint32_t NumberOfBlocks);
+SD_TransferState SD_GetTransferState(void);
+SD_Error SD_StopTransfer(void);
+SD_Error SD_Erase(uint32_t startaddr, uint32_t endaddr);
+SD_Error SD_SendStatus(uint32_t *pcardstatus);
+SD_Error SD_SendSDStatus(uint32_t *psdstatus);
+SD_Error SD_ProcessIRQSrc(void);
+SD_Error SD_WaitReadOperation(void);
+SD_Error SD_WaitWriteOperation(void);
+
+void NVIC_Configuration(void);
+
+
+#endif /*__SDCARD_H */
+
+ 
+ 
+
   
