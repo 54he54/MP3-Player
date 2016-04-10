@@ -51,3 +51,49 @@
 #define SD_CARD_LOCKED      ((uint32_t)0x02000000)
 
 #define SD_DATATIMEOUT  ((uint32_t)0xFFFFFFFF)
+#define SD_0TO7BITS  ((uint32_t)0x000000FF)
+#define SD_8TO15BITS ((uint32_t)0x0000FF00)
+#define SD_16TO23BITS ((uint32_t)0x00FF0000)
+#define SD_24TO32BITS ((uint32_t)0xFF000000)
+#define SD_MAX_DATA_LENGTH ((0x01FFFFFF))
+
+#define SD_HALFFIFO ((0X00000008)) ((0X00000008))
+#define SD_HALFFIFOBYTES ((uint32_t)0x00000020)
+
+
+/**
+ * @brief Command Class Supported
+ */
+#define SD_CCCC_LOCK_UNLOCK   ((uint32_t)0x00000080)
+#define SD_CCCC_WRITE_PORT   ((uint32_t)0x00000040)
+#define SD_CCCC_ERASE     ((uint32_t)0x00000020)
+
+/**
+ * @brief Following Commands are SD Card Specific commands.
+ *        SDIO_APP_CMD should be sent before sending these commands.
+ */
+#define SDIO_SEND_IF_COND   ((uint32_t)0x00000008)
+
+
+
+/*Private variables-------------------------------------------------------------*/
+static uint32_t CardType = SDIO_STD_CAPACITY_SD_CARD_V1_1
+static uint32_t CSD_Tab[4], CID_Tab[4], RCA = 0;
+static uint8_t  SDSTATUS_Tab[16];
+__IO uint32_t StopCondition = 0;
+__IO SD_Error TransferError =SD_OK;
+__IO uint32_t TransferEnd = 0;
+SD_CardInfo SDCardInfo;
+
+/*SDIO Initialization-----------------------------------------------------------*/
+SDIO_InitTypeDef SDIO_InitStructure;
+SDIO_CmdInitTypeDef SDIO_CmdInitStructure;
+SDIO_DataInitTypeDef SDIO_DataInitStructure;
+
+/*Private function prtotypes------------------------------------------------------*/
+static SD_Error CmdError(void);
+static SD_Error CmdResp1Error(uint8_t cmd);
+static SD_Error CmdResp7Error(void);
+static SD_Error CmdResp3Error(void);
+static SD_Error CmdResp2Error(void);
+
