@@ -203,3 +203,35 @@ void SD_DMA_RxConfigure(uint32_t *BufferDST, uint32_t BufferSize)
   DMA_CMD(DMA2_Channel4, ENABLE);
 }
   
+/*
+ * 函数名：SD_DMA_TxConfig
+ * 描述  ：为SDIO发送数据配置DMA2的通道4的请求
+ * 输入  ：BufferDST：用于装载数据的变量指针
+ 		   BufferSize：	缓冲区大小
+ * 输出  ：无
+ */
+ void SD_DMA_TxConfigure(uint32_t *BufferSRC, uint32_t BufferSize)
+{
+  DMA_InitTypeDef DMA_InitStructure;
+  DMA_ClearFlag(DMA2_FLAG_TC4 | DMA2_FLAG_TE4 | DMA2_FLAG_HT4 | DMA2_FLAG_GL4);
+   
+  /*!<DMA2 Channel4 disable*/
+  DMA_Cmd(DMA2_Channel4,DISABLE); //SDIO为第四通道
+   
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)SDIO_FIFO_ADDRESS;
+  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)BufferSRC;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
+  DMA_InitStructure.DMA_BufferSize = BufferSize / 4;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priotity_High;
+  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+  DMA_Init(DMA2_Channel4, &DMA_Initstructure);
+  
+  /*!< DMA2_Channel4,enable */
+  DMA_CMD(DMA2_Channel4, ENABLE);
+ }
+ 
