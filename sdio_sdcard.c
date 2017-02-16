@@ -96,4 +96,110 @@ static SD_Error CmdResp1Error(uint8_t cmd);
 static SD_Error CmdResp7Error(void);
 static SD_Error CmdResp3Error(void);
 static SD_Error CmdResp2Error(void);
+static SD_Error CmdResp6Error(uint8_t cmd, uint16_t *prca);
+static SD_Error SDEnWideBus(FunctionalState NewState);
+static SD_Error IsCardProgramming(uint8_t *pstatus);
+static SD_Error FindSCR(uint16_t rca, uint32_t *pscr);
 
+uint8_t convert_from_bytes_to_power_of_two(uint16_t NumberOfBytes);
+
+/*Private functions--------------------------------------------------------------------*/
+
+/*
+ *Function Name:SD_DeInit
+ *Description:Reset SDIO Port
+ *Input:null
+ *Output:null
+ */
+void SD_DeInit(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
+  
+  /*!<Disable SDIO Clock */
+  SDIO_ClockCmd(Disable);
+  
+  /*!<Set Power State to OFF */
+  SDIO_SetPowerState(SDIO_PowerState_OFF);
+  
+  /*!<DeInitializes the SDIO Peripheral */
+  SDIO_DeInit();
+  
+  /*!<Disable the SDIO AHB Clock*/
+  RCC_AHBPerpheralClockCmd(RCC_AHBPerph_SDIO,Disable);
+  
+  /*!< Configure PC.08, PC.09, PC.10, PC.11, PC.12 pin: D0, D1, D2, D3, CLK pin */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
+  
+  /*!< Configure PD.02 CMD line */
+  GPIO_Initstructure.GPIO_Pin = GPIO_Pin_2;
+  GPIO_Init(GPIOD, &GPIO_Initstructure);
+}
+
+
+/*
+ *Function Name:NVIC_Configuration
+ *Brief:Configure the SDIO Preemption to the Highest Level
+ *Input:null
+ *Output:null
+ */
+void NVIC_Configuration(void)
+{
+  NVIC_InitTypeDef NVIC_Initstructure;
+  
+  /*Configure the NVIC Preemption Priority Bits */
+  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
+  
+  NVIC_InitStructure.NVIC_IRQChannel = SDIO_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_Initstructure.NVIC_IRQChannelCmd = Enable;
+  NVIC_Init(&NVIC_InitStructure);
+}
+
+
+/*
+ *@brief Returns the DMA End Of Transfer Status.
+ *@param None
+ *@retval DMA SDIO Channel Status.
+ */
+uint32_t SD_DMAEndOfTransferStatus(void)
+{
+  return (uint32_t)DMA_GetFlagStatus(DMA2_FLAG_TC4);   //Channel4 transfer complete flag.
+}
+
+/*
+ * 函数名：SD_DMA_RxConfig
+ * 描述  ：为SDIO接收数据配置DMA2的通道4的请求
+ * 输入  ：BufferDST：用于装载数据的变量指针
+ 		   BufferSize：	缓冲区大小
+ * 输出  ：无
+ */
+void SD_DMA_RxConfigure(uint32_t *BufferDST, uint32_t BufferSize)
+{
+  DMA_InitTypeDef DMA_InitStructure;
+  
+  DMA_ClaerFlag(DMA2_FLAG_TC4 | DMA2_FLAG_TE4 | DMA2_FLAG_HT4 | DMA2_FLAG_GL4);
+  
+  /*!<DMA2 Channel4 disable*/
+  DMA_Cmd(DMA2_Channel4,DISABLE); //SDIO为第四通道
+  
+  /*!< DMA2 Channel4 Config */
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)SDIO_FIFO_ADDRESS;
+  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)BufferDST;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+  DMA_InitStructure.DMA_BufferSize = BufferSize / 4;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priotity_High;
+  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+  DMA_Init(DMA2_Channel4, &DMA_Initstructure);
+  
+  /*!< DMA2_Channel4,enable */
+  DMA_CMD(DMA2_Channel4, ENABLE);
+}
+  
