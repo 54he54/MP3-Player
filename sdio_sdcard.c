@@ -235,3 +235,14 @@ void SD_DMA_RxConfigure(uint32_t *BufferDST, uint32_t BufferSize)
   DMA_CMD(DMA2_Channel4, ENABLE);
  }
  
+
+/*
+ * 函数名：GPIO_Configuration
+ * 描述  ：初始化SDIO用到的引脚，开启时钟。
+ * 输入  ：无
+ * 输出  ：无
+ * 调用  ：内部调用
+ */
+static void GPIO_Configuration(void)
+{
+  GPIO_InitTypeDef
