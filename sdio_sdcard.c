@@ -621,3 +621,42 @@ SD_Error SD_InitializeCards(void)
   
   return(errorstatus);
  }
+
+/*
+ * 函数名：SD_GetCardInfo
+ * 描述  ：获取SD卡的具体信息
+ * 输入  ：-cardinfo 指向SD_CardInfo结构体的指针
+ *         这个结构里面包含了SD卡的具体信息
+ * 输出  ：-SD_Error SD卡错误代码
+ *         成功时则为 SD_OK
+ * 调用  ：外部调用
+ */
+SD_Error SD_GetCardInfo(SD_CardInfo *cardinfo)
+{
+  SD_Error errorstatus = SD_OK;
+  uint16_4 tmp = 0;
+  
+  cardinfo->CardType = (uint8_t)CardType;
+  cardingo->RCA = (uint16_t)CardType;
+  
+  /*!< Byte 0 */
+  tmp = (uint8_t)((CSD_Tab[0] & 0xFF000000) >> 24);
+  cardinfo->SD_csd.CSDStruct = (tmp & 0xC0) >> 6;
+  cardinfo->SD_csd.SysSpecVersion = (tmp & ox3C) >> 2;
+  cardingo->SD_csd.Reserved1 = tmp & 0x03;
+  
+  /*!< Byte 1 */
+  tmp = (uint8_t)(CSD_TAB[0] & 0x00FF0000) >>16;
+  cardinfo->SD_csd.TACC = tmp;
+  
+  /*!< Byte 2 */
+  tmp = (uint8_t)((CSD_Tab[0] & 0x0000FF00) >> 8);
+  cardinfo->SD_csd.NSAC = tmp;
+  
+  /*!< Byte 3 */
+  tmp = (uint8_t)(CSD_Tab[0] & 0x000000FF);
+  cardinfo->SD_csd.MaxBusClkFrec = tmp;
+  
+  /*!< Byte 4 */
+  
+}
