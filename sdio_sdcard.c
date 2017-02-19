@@ -643,10 +643,10 @@ SD_Error SD_GetCardInfo(SD_CardInfo *cardinfo)
   tmp = (uint8_t)((CSD_Tab[0] & 0xFF000000) >> 24);
   cardinfo->SD_csd.CSDStruct = (tmp & 0xC0) >> 6;
   cardinfo->SD_csd.SysSpecVersion = (tmp & ox3C) >> 2;
-  cardingo->SD_csd.Reserved1 = tmp & 0x03;
+  cardinfo->SD_csd.Reserved1 = tmp & 0x03;
   
   /*!< Byte 1 */
-  tmp = (uint8_t)(CSD_TAB[0] & 0x00FF0000) >>16;
+  tmp = (uint8_t)((CSD_TAB[0] & 0x00FF0000) >>16);
   cardinfo->SD_csd.TACC = tmp;
   
   /*!< Byte 2 */
@@ -657,6 +657,412 @@ SD_Error SD_GetCardInfo(SD_CardInfo *cardinfo)
   tmp = (uint8_t)(CSD_Tab[0] & 0x000000FF);
   cardinfo->SD_csd.MaxBusClkFrec = tmp;
   
-  /*!< Byte 4 */
+  /*!< Byte 4 */ 
+  tmp = (uint8_t)((CSD_Tab[1] & 0xFF000000) >> 24);
+  cardinfo->SD_csd.CardComdClasses = tmp << 4;
   
+   /*!< Byte 5 */
+  tmp = (uint8_t)((CSD_Tab[1] & 0x00FF0000) >> 16);
+  cardinfo->SD_csd.CardComdClasses |= (tmp & 0xF0) >> 4;
+  cardinfo->SD_csd.RdBlockLen = tmp & 0x0F;
+  
+  /*!< Byte 6 */
+  tmp = (uint8_t)((CSD_Tab[1] & 0x0000FF00) >> 8);
+  cardinfo->SD_csd.PartBlockRead = (tmp & 0x80) >> 7;
+  cardinfo->SD_csd.WrBlockMisalign = (tmp & 0x40) >> 6;
+  cardinfo->SD_csd.RdBlockMisalign = (tmp & 0x20) >> 5;
+  cardinfo->SD_csd.DSRImpl = (tmp & 0x10) >> 4;
+  cardinfo->SD_csd.Reserved2 = 0; /*!< Reserved */
+  
+  if ((CardType == SDIO_STD_CAPACITY_SD_CARD_V1_1) || (CardType == SDIO_STD_CAPACITY_SD_CARD_V2_0))
+  {
+    cardinfo->SD_csd_DeviceSize |= (tmp & 0x03) << 10;
+    
+    /*!< Byte 7 */
+    tmp = (uint8_t)(CSD_Tab[1] & 0x000000FF);
+    cardinfo->SD_csd.DeviceSize |= (tmp) << 2;
+
+    /*!< Byte 8 */
+    tmp = (uint8_t)((CSD_Tab[2] & 0xFF000000) >> 24);
+    cardinfo->SD_csd.DeviceSize |= (tmp & 0xC0) >> 6;
+
+    cardinfo->SD_csd.MaxRdCurrentVDDMin = (tmp & 0x38) >> 3;
+    cardinfo->SD_csd.MaxRdCurrentVDDMax = (tmp & 0x07);
+
+    /*!< Byte 9 */
+    tmp = (uint8_t)((CSD_Tab[2] & 0x00FF0000) >> 16);
+    cardinfo->SD_csd.MaxWrCurrentVDDMin = (tmp & 0xE0) >> 5;
+    cardinfo->SD_csd.MaxWrCurrentVDDMax = (tmp & 0x1C) >> 2;
+    cardinfo->SD_csd.DeviceSizeMul = (tmp & 0x03) << 1;
+    /*!< Byte 10 */
+    tmp = (uint8_t)((CSD_Tab[2] & 0x0000FF00) >> 8);
+    cardinfo->SD_csd.DeviceSizeMul |= (tmp & 0x80) >> 7;
+    
+    cardinfo->CardCapacity = (cardinfo->SD_csd.DeviceSize + 1) ;
+    cardinfo->CardCapacity *= (1 << (cardinfo->SD_csd.DeviceSizeMul + 2));
+    cardinfo->CardBlockSize = 1 << (cardinfo->SD_csd.RdBlockLen);
+    cardinfo->CardCapacity *= cardinfo->CardBlockSize;
+  }
+  
+  else if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+  {
+    /*!< Byte 7 */
+    tmp = (uint8_t)(CSD_Tab[1] & 0x000000FF);
+    cardinfo->SD_csd.DeviceSize = (tmp & 0x3F) << 16;
+
+    /*!< Byte 8 */
+    tmp = (uint8_t)((CSD_Tab[2] & 0xFF000000) >> 24);
+
+    cardinfo->SD_csd.DeviceSize |= (tmp << 8);
+
+    /*!< Byte 9 */
+    tmp = (uint8_t)((CSD_Tab[2] & 0x00FF0000) >> 16);
+
+    cardinfo->SD_csd.DeviceSize |= (tmp);
+
+    /*!< Byte 10 */
+    tmp = (uint8_t)((CSD_Tab[2] & 0x0000FF00) >> 8);
+    
+    cardinfo->CardCapacity = (cardinfo->SD_csd.DeviceSize + 1) * 512 * 1024;
+    cardinfo->CardBlockSize = 512;
+  }
+  
+  cardinfo->SD_csd.EraseGrSize = (tmp & 0x40) >> 6;
+  cardinfo->SD_csd.EraseGrMul = (tmp & 0x3F) << 1;
+  
+  /*!< Byte 11 */
+  tmp = (uint8_t)(CSD_Tab[2] & 0x000000FF);
+  cardinfo->SD_csd.EraseGrMul |= (tmp & 0x80) >> 7;
+  cardinfo->SD_csd.WrProtectGrSize = (tmp & 0x7F);
+																   
+  /*!< Byte 12 */
+  tmp = (uint8_t)((CSD_Tab[3] & 0xFF000000) >> 24);
+  cardinfo->SD_csd.WrProtectGrEnable = (tmp & 0x80) >> 7;
+  cardinfo->SD_csd.ManDeflECC = (tmp & 0x60) >> 5;
+  cardinfo->SD_csd.WrSpeedFact = (tmp & 0x1C) >> 2;
+  cardinfo->SD_csd.MaxWrBlockLen = (tmp & 0x03) << 2;
+
+  /*!< Byte 13 */
+  tmp = (uint8_t)((CSD_Tab[3] & 0x00FF0000) >> 16);
+  cardinfo->SD_csd.MaxWrBlockLen |= (tmp & 0xC0) >> 6;
+  cardinfo->SD_csd.WriteBlockPaPartial = (tmp & 0x20) >> 5;
+  cardinfo->SD_csd.Reserved3 = 0;
+  cardinfo->SD_csd.ContentProtectAppli = (tmp & 0x01);
+
+  /*!< Byte 14 */
+  tmp = (uint8_t)((CSD_Tab[3] & 0x0000FF00) >> 8);
+  cardinfo->SD_csd.FileFormatGrouop = (tmp & 0x80) >> 7;
+  cardinfo->SD_csd.CopyFlag = (tmp & 0x40) >> 6;
+  cardinfo->SD_csd.PermWrProtect = (tmp & 0x20) >> 5;
+  cardinfo->SD_csd.TempWrProtect = (tmp & 0x10) >> 4;
+  cardinfo->SD_csd.FileFormat = (tmp & 0x0C) >> 2;
+  cardinfo->SD_csd.ECC = (tmp & 0x03);
+
+  /*!< Byte 15 */
+  tmp = (uint8_t)(CSD_Tab[3] & 0x000000FF);
+  cardinfo->SD_csd.CSD_CRC = (tmp & 0xFE) >> 1;
+  cardinfo->SD_csd.Reserved4 = 1;
+
+
+  /*!< Byte 0 */
+  tmp = (uint8_t)((CID_Tab[0] & 0xFF000000) >> 24);
+  cardinfo->SD_cid.ManufacturerID = tmp;
+
+  /*!< Byte 1 */
+  tmp = (uint8_t)((CID_Tab[0] & 0x00FF0000) >> 16);
+  cardinfo->SD_cid.OEM_AppliID = tmp << 8;
+
+  /*!< Byte 2 */
+  tmp = (uint8_t)((CID_Tab[0] & 0x000000FF00) >> 8);
+  cardinfo->SD_cid.OEM_AppliID |= tmp;
+
+  /*!< Byte 3 */
+  tmp = (uint8_t)(CID_Tab[0] & 0x000000FF);
+  cardinfo->SD_cid.ProdName1 = tmp << 24;
+
+  /*!< Byte 4 */
+  tmp = (uint8_t)((CID_Tab[1] & 0xFF000000) >> 24);
+  cardinfo->SD_cid.ProdName1 |= tmp << 16;
+
+  /*!< Byte 5 */
+  tmp = (uint8_t)((CID_Tab[1] & 0x00FF0000) >> 16);
+  cardinfo->SD_cid.ProdName1 |= tmp << 8;
+
+  /*!< Byte 6 */
+  tmp = (uint8_t)((CID_Tab[1] & 0x0000FF00) >> 8);
+  cardinfo->SD_cid.ProdName1 |= tmp;
+
+  /*!< Byte 7 */
+  tmp = (uint8_t)(CID_Tab[1] & 0x000000FF);
+  cardinfo->SD_cid.ProdName2 = tmp;
+
+  /*!< Byte 8 */
+  tmp = (uint8_t)((CID_Tab[2] & 0xFF000000) >> 24);
+  cardinfo->SD_cid.ProdRev = tmp;
+
+  /*!< Byte 9 */
+  tmp = (uint8_t)((CID_Tab[2] & 0x00FF0000) >> 16);
+  cardinfo->SD_cid.ProdSN = tmp << 24;
+
+  /*!< Byte 10 */
+  tmp = (uint8_t)((CID_Tab[2] & 0x0000FF00) >> 8);
+  cardinfo->SD_cid.ProdSN |= tmp << 16;
+
+  /*!< Byte 11 */
+  tmp = (uint8_t)(CID_Tab[2] & 0x000000FF);
+  cardinfo->SD_cid.ProdSN |= tmp << 8;
+
+  /*!< Byte 12 */
+  tmp = (uint8_t)((CID_Tab[3] & 0xFF000000) >> 24);
+  cardinfo->SD_cid.ProdSN |= tmp;
+
+  /*!< Byte 13 */
+  tmp = (uint8_t)((CID_Tab[3] & 0x00FF0000) >> 16);
+  cardinfo->SD_cid.Reserved1 |= (tmp & 0xF0) >> 4;
+  cardinfo->SD_cid.ManufactDate = (tmp & 0x0F) << 8;
+
+  /*!< Byte 14 */
+  tmp = (uint8_t)((CID_Tab[3] & 0x0000FF00) >> 8);
+  cardinfo->SD_cid.ManufactDate |= tmp;
+
+  /*!< Byte 15 */
+  tmp = (uint8_t)(CID_Tab[3] & 0x000000FF);
+  cardinfo->SD_cid.CID_CRC = (tmp & 0xFE) >> 1;
+  cardinfo->SD_cid.Reserved2 = 1;
+  
+  return(errorstatus);
 }
+
+/**
+  * @brief  Enables wide bus opeartion for the requeseted card if supported by 
+  *         card.
+  * @param  WideMode: Specifies the SD card wide bus mode. 
+  *   This parameter can be one of the following values:
+  *     @arg SDIO_BusWide_8b: 8-bit data transfer (Only for MMC)
+  *     @arg SDIO_BusWide_4b: 4-bit data transfer
+  *     @arg SDIO_BusWide_1b: 1-bit data transfer
+  * @retval SD_Error: SD Card Error code.
+  */
+SD_Error SD_GetCardStatus(SD_CardStatus *cardstatus)
+{
+  SD_Error errorstatus = SD_OK;
+  uint8_t tmp = 0;
+  
+  errorstatus = SD_SendSDStatus((uint32_t *)SDSTATUS_Tab);
+  
+  if (errorstatus != SD_OK)
+  {
+    return(errorstatus);
+  }
+  
+  /*!<Byte 0 */
+  tmp = (uint8_t)((SDSTATUS_Tab[0] &0xC0) >> 6);
+  cardstatus->DAT_BUS_WIDTH = tmp;
+  
+  /*!< Byte 0 */
+  tmp = (uint8_t)((SDSTATUS_Tab[0] & 0x20) >> 5);
+  cardstatus->SECURED_MODE = tmp;
+
+  /*!< Byte 2 */
+  tmp = (uint8_t)((SDSTATUS_Tab[2] & 0xFF));
+  cardstatus->SD_CARD_TYPE = tmp << 8;
+
+  /*!< Byte 3 */
+  tmp = (uint8_t)((SDSTATUS_Tab[3] & 0xFF));
+  cardstatus->SD_CARD_TYPE |= tmp;
+
+  /*!< Byte 4 */
+  tmp = (uint8_t)(SDSTATUS_Tab[4] & 0xFF);
+  cardstatus->SIZE_OF_PROTECTED_AREA = tmp << 24;
+
+  /*!< Byte 5 */
+  tmp = (uint8_t)(SDSTATUS_Tab[5] & 0xFF);
+  cardstatus->SIZE_OF_PROTECTED_AREA |= tmp << 16;
+
+  /*!< Byte 6 */
+  tmp = (uint8_t)(SDSTATUS_Tab[6] & 0xFF);
+  cardstatus->SIZE_OF_PROTECTED_AREA |= tmp << 8;
+
+  /*!< Byte 7 */
+  tmp = (uint8_t)(SDSTATUS_Tab[7] & 0xFF);
+  cardstatus->SIZE_OF_PROTECTED_AREA |= tmp;
+
+  /*!< Byte 8 */
+  tmp = (uint8_t)((SDSTATUS_Tab[8] & 0xFF));
+  cardstatus->SPEED_CLASS = tmp;
+
+  /*!< Byte 9 */
+  tmp = (uint8_t)((SDSTATUS_Tab[9] & 0xFF));
+  cardstatus->PERFORMANCE_MOVE = tmp;
+
+  /*!< Byte 10 */
+  tmp = (uint8_t)((SDSTATUS_Tab[10] & 0xF0) >> 4);
+  cardstatus->AU_SIZE = tmp;
+
+  /*!< Byte 11 */
+  tmp = (uint8_t)(SDSTATUS_Tab[11] & 0xFF);
+  cardstatus->ERASE_SIZE = tmp << 8;
+
+  /*!< Byte 12 */
+  tmp = (uint8_t)(SDSTATUS_Tab[12] & 0xFF);
+  cardstatus->ERASE_SIZE |= tmp;
+
+  /*!< Byte 13 */
+  tmp = (uint8_t)((SDSTATUS_Tab[13] & 0xFC) >> 2);
+  cardstatus->ERASE_TIMEOUT = tmp;
+
+  /*!< Byte 13 */
+  tmp = (uint8_t)((SDSTATUS_Tab[13] & 0x3));
+  cardstatus->ERASE_OFFSET = tmp;
+ 
+  return(errorstatus);
+}
+
+/*
+ * 函数名：SD_EnableWideBusOperation
+ * 描述  ：配置卡的数据宽度(但得看卡是否支持)
+ * 输入  ：-WideMode 指定SD卡的数据线宽
+ *         具体可配置如下
+ *         @arg SDIO_BusWide_8b: 8-bit data transfer (Only for MMC)
+ *         @arg SDIO_BusWide_4b: 4-bit data transfer
+ *         @arg SDIO_BusWide_1b: 1-bit data transfer (默认)
+ * 输出  ：-SD_Error SD卡错误代码
+ *         成功时则为 SD_OK
+ * 调用  ：外部调用
+ */
+
+SD_Error SD_EnableWideBusOperation(uint32_t WideMode)
+{
+  SD_Error errorstatus = SD_OK;
+  
+  /*!< MMC Card doesn't support this feature */
+  if (SDIO_MULTIMEDIA_CARD == CardType)
+  {
+    errorstatus = SD_UNSUPPORTED_FEATURE;
+    return(errorstatus);
+  }
+  
+  else if ((SDIO_STD_CAPACITY_SD_CARD_V1_1 == CardType) || (SDIO_STD_CAPACITY_SD_CARD_V2_0 == CardType) || (SDIO_HIGH_CAPACITY_SD_CARD == CardType)
+           {
+             if (SDIO_BusWide_8b == WideMode)
+             {
+               errorstatus = SD_UNSUPPORTED_FEATURE;
+               return(errorstatus);
+             }
+             else if (SDIO_BusWide_4b == WideMode)
+             {
+               errorstatus = SDEnWideBus(ENABLE);
+               
+               if (SD_OK == errorstatus)
+               {
+                 /*!<Configure the SDIO Peripheral */
+                 SDIO_InitStructure.SDIO_ClockDiv = SDIO_TRANSFER_CLK_DIV;
+                 SDIO_InitStructure.SDIO_ClockEdge = SDIO_ClockEdge_Rising;
+                 SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Disable;
+                 SDIO_InitStructure.SDIO_ClockPowerSave = SDIO_ClockPowerSave_Disable;
+                 SDIO_InitStructure.SDIO_BusWide = SDIO_BusWide_4b;
+                 SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Disable;
+                 SDIO_Init(&SDIO_InitStructure);
+               }
+             }
+             else
+             {
+               errorstatus = SDEnWideBus(Disable);
+               
+               if (SD_OK == errorstatus)
+               {
+                 /*!<Configure the SDIO Peripheral */
+                 SDIO_InitStructure.SDIO_ClockDiv = SDIO_TRANSFER_CLK_DIV;
+                 SDIO_InitStructure.SDIO_ClockEdge = SDIO_ClockEdge_Rising;
+                 SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Disable;
+                 SDIO_InitStructure.SDIO_ClockPowerSave = SDIO_ClockPowerSave_Disable;
+                 SDIO_InitStructure.SDIO_BusWide = SDIO_BusWide_1b;
+                 SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HarewareFlowControl_Disable;
+                 SDIO_Init(&SDIO_InitStructure);
+               }
+             }
+           }
+           return(errorstatus);
+}
+           
+/*
+ * 函数名：SD_SelectDeselect
+ * 描述  ：利用cmd7，选择卡相对地址为addr的卡，取消选择其它卡
+ *   		如果addr = 0,则取消选择所有的卡
+ * 输入  ：-addr 选择卡的地址
+ * 输出  ：-SD_Error SD卡错误代码
+ *         成功时则为 SD_OK
+ * 调用  ：外部调用
+ */	
+ SD_Error SD_SelectDeselect(uint32_t addr)
+ {
+   SD_Error errorstatus = SD_OK;
+   
+   /*!<Send CMD7 SDIO_SEL_DESEL_CARD */
+   SDIO_CmdInitStructure.SDIO_Argument = addr;
+   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SEL_DESEL_CARD;
+   SDIO_CmdInitStructure.SDIO_SDIO_Response = SDIO_Response_Short;
+   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+   SDIO_SendCommand(&SDIO_CmdInitStructure);
+   
+   errorstatus = CmdResp1Error(SD_CMD_SEL_DESEL_CARD);
+   return(errorstatus);
+ }
+
+/**
+  * @brief  Allows to read one block from a specified address in a card. The Data
+  *         transfer can be managed by DMA mode or Polling mode. 
+  * @note   This operation should be followed by two functions to check if the 
+  *         DMA Controller and SD Card status.
+  *          - SD_ReadWaitOperation(): this function insure that the DMA
+  *            controller has finished all data transfer.
+  *          - SD_GetStatus(): to check that the SD Card has finished the 
+  *            data transfer and it is ready for data.            
+  * @param  readbuff: pointer to the buffer that will contain the received data
+  * @param  ReadAddr: Address from where data are to be read.  
+  * @param  BlockSize: the SD card Data block size. The Block size should be 512.
+  * @retval SD_Error: SD Card Error code.
+  */
+   SD_Error SD_ReadBlock(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize)
+   {
+     SD_Error errorstatus = SD_OK;
+     
+     #if defined (SD_POLLING_MODE)
+     uint32_t count = 0, *tempbuff = (uint32_t *)readbuff;
+     #endif
+     
+     TransferError = SD_OK;
+     TransferEnd = 0;
+     StopCondition = 0;
+     
+     SDIO->DCTL = 0X0;
+     
+     
+     if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+     {
+       BlockSize = 512;
+       ReadAddr /= 512;
+     }
+     /*******************add，没有这一段容易卡死在DMA检测中*************************************/
+     /*!<Set Block Size for Card，cmd16,若是sdsc卡，可以用来设置块大小，若是sdhc卡，块大小为512字节，不受cmd16影响 */
+     SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
+     SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
+     SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+     SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+     SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+     SDIO_SendCommand(&SDIO_CmdInitStructure);
+     
+     errorstatus = CmpResp1Error(SD_CMD_SET_BLOCKLEN);
+     
+     if (SD_OK !=errorstatus)
+     {
+       return(errorstatus);
+     }
+/***********************************************************/
+     SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
+     SDIO_DataInitStructure.SDIO_DataLength = BlockSize;
+     SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
+     SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToSDIO;
+     
+   }
