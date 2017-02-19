@@ -1064,5 +1064,97 @@ SD_Error SD_EnableWideBusOperation(uint32_t WideMode)
      SDIO_DataInitStructure.SDIO_DataLength = BlockSize;
      SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
      SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToSDIO;
-     
+     SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
+     SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
+     SDIO_DataConfig(&SDIO_DataInitStructure);
+	   
+     /*!< Send CMD17 READ_SINGLE_BLOCK */
+     SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)ReadAddr;
+     SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_READ_SINGLE_BLOCK;
+     SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+     SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+     SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+     SDIO_SendCommand(&SDIO_CmdInitStructure);
+	   
+     errorstatus = CmdResp1Error(SD_CMD_READ_SINGLE_BLOCK);
+
+     if (errorstatus != SD_OK)
+     {
+	     return(errorstatus);
+     }
+#if defined (SD_POLLING_MODE)
+    /*!< In case of single block transfer, no need of stop transfer at all.*/
+    /*!< Polling mode */
+    while (!!(SDIO->STA &(SDIO_FLAG_RXOVERR | SDIO_FLAG_DCRCFAIL | SDIO_FLAG_DTIMEOUT | SDIO_FLAG_DBCKEND | SDIO_FLAG_STBITERR)))
+    {
+       if (SDIO_GetFlagStatus(SDIO_FLAG_RXFIFOHF) != RESET)
+       {
+	  for (count = 0; count < 8; count++)
+	  {
+	     *(tempbuff + count) = SDIO_ReadData();
+          }
+	   tempbuff += 8;
+       }
+    }
+	   
+    if (SDIO_GetFlagStatus(SDIO_FLAG_DTIMEOUT) != RESET)
+    {
+       SDIO_ClearFlag(SDIO_FLAG_DTIMEOUT);
+       errorstatus = SD_DATA_TIMEOUT;
+       return(errorstatus);
+    }
+
+    else if (SDIO_GetFlagStatus(SDIO_FLAG_DCRCFAIL != RESET))
+    {
+      SDIO_ClearFlag(SDIO_FLAG_DCRCFAIL);
+      errorstatus = SD_DATA_CRC_FAIL;
+      return(errorstatus);
+    }
+
+    else if (SDIO_GetFlagStatus(SDIO_FLAG_RXOVERR) != RESET)
+    {
+	SDIO_ClearFlag(SDIO_FLAG_RXOVERR);
+	errorstatus = SD_RX_OVERRUN;
+	return(errorstatus);
+	    
+    else if (SDIO_GetFlagStatus(SDIO_FLAG_STBITERR) != RESET)
+    {
+        SDIO_ClearFlag(SDIO_FLAG_STBITERR);
+	errorstatus = SD_START_BIT_ERR;
+	return(errorstatus);
+    }
+    
+    while (SDIO_GetFlagStatus(SDIO_FLAG_RXDAVL) != RESET)
+    {
+      *tembuff = SDIO_ReadData();
+      tempbuff++;
+    }
+   
+     /*!< Clear all the static flags */
+     SDIO_ClearFlag(SDIO_STATIC_FLAGS);
+	    
+#elif defined (SD_DMA_MODE)
+     SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);
+     SDIO_DMACmd(ENABLE);
+     SD_DMACmd(ENABLE);
+     SD_DMA_RxConfig((uint32_t *)readbuff, BlockSize);
+#endif
+	    
+     return(errorstatus);
    }
+	   
+/**
+  * @brief  Allows to read blocks from a specified address  in a card.  The Data
+  *         transfer can be managed by DMA mode or Polling mode. //分两个模式
+  * @note   This operation should be followed by two functions to check if the 
+  *         DMA Controller and SD Card status.	   //dma模式时要调用以下两个函数
+  *          - SD_ReadWaitOperation(): this function insure that the DMA
+  *            controller has finished all data transfer. 
+  *          - SD_GetStatus(): to check that the SD Card has finished the 
+  *            data transfer and it is ready for data.   
+  * @param  readbuff: pointer to the buffer that will contain the received data.
+  * @param  ReadAddr: Address from where data are to be read.
+  * @param  BlockSize: the SD card Data block size. The Block size should be 512.
+  * @param  NumberOfBlocks: number of blocks to be read.
+  * @retval SD_Error: SD Card Error code.
+  */
