@@ -1158,3 +1158,512 @@ SD_Error SD_EnableWideBusOperation(uint32_t WideMode)
   * @param  NumberOfBlocks: number of blocks to be read.
   * @retval SD_Error: SD Card Error code.
   */
+SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
+{
+	SD_Error errorstatus = SD_OK;
+	TransferError = SD_OK;
+	TransferEnd = 0;
+	StopCondition;
+	
+	SDIO->DCTRL = 0X0;
+	
+	if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+	{
+		BlockSize = 512;
+		ReadAddr /= 512;
+	}
+	
+	/*!< Set Block Size for Card，cmd16,若是sdsc卡，可以用来设置块大小，若是sdhc卡，块大小为512字节，不受cmd16影响 */
+	SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
+	SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
+	SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+	SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+	SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+	SDIO_SendCommand(&SDIO_CmdInitStructure);
+	
+	errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
+	
+	if (SD_OK != errorstatus)
+	{
+		return(errorstatus);
+	}
+	
+	SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
+	SDIO_DataInitStructure.SDIO_DataLength = NumberOfBlocks * BlockSize;
+	SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
+	SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToSDIO;
+	SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
+	SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
+	SDIO_DataConfig(&SDIO_DataInitStructure);
+	
+	/*!< Send CMD18 READ_MULT_BLOCK with argument data address */
+	SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)ReadAddr;
+	SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_READ_MULT_BLOCK;
+	SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+	SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+	SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+	SDIO_SendCommand(&SDIO_CmdInitStructure);
+	
+	errorstatus = CmdResp1Error(SD_CMD_READ_MULT_BLOCK);
+	
+	if (errorstatus != SD_OK)
+	{
+		return(errorstatus);
+	}
+	
+	SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);
+	SDIO_DMACmd(ENABLE);
+	SD_DMA_RxConfig((uint32_t *)readbuff, (NumberOfBlocks * BlockSize));
+	
+	return(errorstatus);
+}
+
+
+/**
+  * @brief  This function waits until the SDIO DMA data transfer is finished. 
+  *         This function should be called after SDIO_ReadMultiBlocks() function
+  *         to insure that all data sent by the card are already transferred by 
+  *         the DMA controller.        
+  * @param  None.
+  * @retval SD_Error: SD Card Error code.
+  */
+SD_Error SD_WaitReadOperation(void)
+{
+	SD_Error errorstatus = SD_OK;
+	
+	while ((SD_DMAEndOfTransferStatus() == RESET) && (TransferEnd == 0) && (TransferError == SD_OK))
+	{}
+	
+	if (TransferError != SD_OK)
+	{
+		return(TransferError);
+	}
+	
+	return(errorstatus);
+}
+
+/**
+  * @brief  Allows to write one block starting from a specified address in a card.
+  *         The Data transfer can be managed by DMA mode or Polling mode.
+  * @note   This operation should be followed by two functions to check if the 
+  *         DMA Controller and SD Card status.
+  *          - SD_ReadWaitOperation(): this function insure that the DMA
+  *            controller has finished all data transfer.
+  *          - SD_GetStatus(): to check that the SD Card has finished the 
+  *            data transfer and it is ready for data.      
+  * @param  writebuff: pointer to the buffer that contain the data to be transferred.
+  * @param  WriteAddr: Address from where data are to be read.   
+  * @param  BlockSize: the SD card Data block size. The Block size should be 512.
+  * @retval SD_Error: SD Card Error code.
+  */
+SD_Error SD_WriteBlock(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSize)
+{
+	SD_Error errorstatus = SD_OK;
+	
+#ifdefined (SD_POLLING_MODE)
+	uint32_t bytestransferred = 0, count = 0, restwords = 0;
+	uint32_t *tempbuff = (uint32_t *)writebuff;
+#endif
+	TransferError = SD_OK;
+	TransferEnd = 0;
+	StopCondition = 0;
+	
+	SDIO->DCTRL = 0X0;
+	
+	
+	if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+	{
+		BlockSize = 512;
+		WriteAddr /= 512;
+	}
+	
+	/*******************add，没有这一段容易卡死在DMA检测中*************************************/
+    /*!< Set Block Size for Card，cmd16,若是sdsc卡，可以用来设置块大小，若是sdhc卡，块大小为512字节，不受cmd16影响 */
+	SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
+	SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
+	SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+	SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+	SDIO_SendCommand(&SDIO_CmdInitStructure);
+	
+	errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
+	
+	if (SD_OK != errorstatus)
+	{
+		return(errorstatus);
+	}
+	
+	/*********************************************************************************/
+	
+	/*!< Send CMD24 WRITE_SINGLE_BLOCK */
+	SDIO_CmdInitStructure.SDIO_Argument = WriteAddr;
+	SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_WRITE_SINGLE_BLOCK;
+	SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+	SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+	SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+	SDIO_SendCommand(&SDIO_CmdInitStructure);
+	
+	errorstatus = CmdResp1Error(SD_CMD_WRITE_SINGLE_BLOCK);
+	
+	if (errorstatus != SD_OK)
+	{
+		return(errorstatus);
+	}
+	
+	//配置sdio的写数据寄存器
+	SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
+	SDIO_DataInitStructure.SDIO_DataLength = BlockSize;
+	SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
+	SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToCard;
+	SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
+	SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
+	SDIO_DataConfig(&SDIO_DataInitStructure);
+	
+	/*!< In case of single data block transfer no need of stop command at all */
+	#if defined (SD_POLLING_MODE)
+	while (!(SDIO->STA & (SDIO_FLAG_DBCKEND | SDIO_FLAG_TXUNDERR | SDIO_FLAG_DCRCFAIL | SDIO_FALG_DTIMEOUT | SDIO_FLAG_STBITERR)))
+	{
+		if (SDIO_GetFlagStatus(SDIO_FLAG_TXFIFOHE) != RESET)
+		{
+			if ((512 -bytestransferred) < 32)
+			{
+				restwords = ((512 - bytestransferred) % 4 == 0) ? ((512 - bytestransferred) % 4) : ((512 - bytestransferred) % 4 + 1);
+				for (count = 0; count < restwords; count++, tempbuff++, bytestransferred += 4)
+				{
+					SDIO_WriteData(*tempbuff);
+				}
+				else
+				{
+					for (count = 0; count < 8; count++)
+					{
+						SDIO_WriteData(*(tempbuff + count));
+					}
+					tempbuff += 8;
+					bytestransferred += 32;
+				}
+			}
+ 		}
+	}
+	
+	if (SDIO_GetFlagStatus(SDIO_FLAG_DTIMEOUT) != RESET)
+	{
+		SDIO_ClearFlag(SDIO_FLAG_DTIMEOUT);
+		errorstatus = SD_DATA_TIMEOUT;
+		return(errorstatus);
+	}
+	else if (SDIO_GetFlagStatus(SDIO_FLAG_DCRCFAIL) != RESET)
+	{
+		SDIO_ClearFlag(SDIO_FLAG_DCRCFAIL);
+		errorstatus = SD_DATA_CRC_FAIL;
+		return(errorstatus);
+	}
+	else if (SDIO_GetFlagStatus(SDIO_FLAG_TXUNDERR) != RESET)
+	{
+		SDIO_ClearFlag(SDIO_FLAG_TXUNDERR);
+		errorstatus = SD_TX_UNDERRUN;
+		return(errorstatus);
+	}
+	else if (SDIO_GetFlagStatus(SDIO_FLAG_STBITERR) != SD_OK)
+	{
+		SDIO_ClearFlag(SDIO_FLAG_STBITERR);
+		errorstatus = SD_START_BIT_ERR;
+		return(errorstatus);
+	}
+#elif defined (SD_DMA_MODE)
+	SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);
+	SD_DMA_Tx_Config((uint32_t *)writebuff, BlockSize);
+	SDIO_DMACmd(Enable);
+#endif
+		
+ return(errorstatus);
+}
+	   
+/**
+  * @brief  Allows to write blocks starting from a specified address in a card.
+  *         The Data transfer can be managed by DMA mode only. 
+  * @note   This operation should be followed by two functions to check if the 
+  *         DMA Controller and SD Card status.
+  *          - SD_ReadWaitOperation(): this function insure that the DMA
+  *            controller has finished all data transfer.
+  *          - SD_GetStatus(): to check that the SD Card has finished the 
+  *            data transfer and it is ready for data.     
+  * @param  WriteAddr: Address from where data are to be read.
+  * @param  writebuff: pointer to the buffer that contain the data to be transferred.
+  * @param  BlockSize: the SD card Data block size. The Block size should be 512.
+  * @param  NumberOfBlocks: number of blocks to be written.
+  * @retval SD_Error: SD Card Error code.
+  */
+  
+  /*
+ * 函数名：SD_WriteMultiBlocks
+ * 描述  ：从输入的起始地址开始，向卡写入多个数据块，
+ 		  只能在DMA模式下使用这个函数
+	注意：调用这个函数后一定要调用
+			SD_WaitWriteOperation（）来等待DMA传输结束
+			和	SD_GetStatus() 检测卡与SDIO的FIFO间是否已经完成传输
+ * 输入  ： 
+		  * @param  WriteAddr: Address from where data are to be read.
+		  * @param  writebuff: pointer to the buffer that contain the data to be transferred.
+		  * @param  BlockSize: the SD card Data block size. The Block size should be 512.
+		  * @param  NumberOfBlocks: number of blocks to be written.
+ * 输出  ：SD错误类型
+ */
+SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
+{
+	SD_Error errorstatus = SD_OK;
+	_IO uint32_t count = 0;
+	
+	TransferError = SD_OK;
+	TransferEnd = 0;
+	StopCondition = 1;
+	
+	SDIO->DCTRL = 0X0;
+	
+	if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+	{
+		BlockSize = 512;
+		WriteAddr /= 512;
+	}
+	
+	/*******************add，没有这一段容易卡死在DMA检测中*************************************/
+    /*!< Set Block Size for Card，cmd16,若是sdsc卡，可以用来设置块大小，若是sdhc卡，块大小为512字节，不受cmd16影响 */
+  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
+  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
+  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;   //r1
+  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+  SDIO_SendCommand(&SDIO_CmdInitStructure);
+
+  errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
+
+  if (SD_OK != errorstatus)
+  {
+    return(errorstatus);
+  }
+	
+  /*********************************************************************************/
+
+  /*!< To improve performance  */
+  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) (RCA << 16);
+  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_APP_CMD;	// cmd55
+  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+  SDIO_SendCommand(&SDIO_CmdInitStructure);
+
+
+  errorstatus = CmdResp1Error(SD_CMD_APP_CMD);
+
+  if (errorstatus != SD_OK)
+  {
+    return(errorstatus);
+  }
+  /*!< To improve performance *///  pre-erased，在多块写入时可发送此命令进行预擦除
+  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)NumberOfBlocks;  //参数为将要写入的块数目
+  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCK_COUNT;	 //cmd23
+  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+  SDIO_SendCommand(&SDIO_CmdInitStructure);
+
+  errorstatus = CmdResp1Error(SD_CMD_SET_BLOCK_COUNT);
+
+  if (errorstatus != SD_OK)
+  {
+    return(errorstatus);
+  }
+
+  /*!< Send CMD25 WRITE_MULT_BLOCK with argument data address */
+  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)WriteAddr;
+  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_WRITE_MULT_BLOCK;
+  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+  SDIO_SendCommand(&SDIO_CmdInitStructure);
+
+  errorstatus = CmdResp1Error(SD_CMD_WRITE_MULT_BLOCK);
+
+  if (SD_OK != errorstatus)
+  {
+    return(errorstatus);
+  }
+
+  SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
+  SDIO_DataInitStructure.SDIO_DataLength = NumberOfBlocks * BlockSize;
+  SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
+  SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToCard;
+  SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
+  SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
+  SDIO_DataConfig(&SDIO_DataInitStructure);
+
+  SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);
+  SDIO_DMACmd(ENABLE);    
+  SD_DMA_TxConfig((uint32_t *)writebuff, (NumberOfBlocks * BlockSize));
+
+  return(errorstatus);
+}
+	   
+/**
+  * @brief  This function waits until the SDIO DMA data transfer is finished. 
+  *         This function should be called after SDIO_WriteBlock() and
+  *         SDIO_WriteMultiBlocks() function to insure that all data sent by the 
+  *         card are already transferred by the DMA controller.        
+  * @param  None.
+  * @retval SD_Error: SD Card Error code.
+  */
+SD_Error SD_WaitWriteOperation(void)
+{
+        SD_Error errorstatus = SD_OK;
+	
+	while ((SD_DMAEndOfTransferStatus() == RESET) && (TransferEnd == 0) && (TransferError == SD_OK))
+	{}
+	
+	if (TransferError != SD_OK)
+	{
+		return(TransferError);
+	}
+	
+	/*!< Clear all the static flags */
+	SDIO_ClearFlag(SDIO_STATIC_FLAGS);
+	
+	return(errorstatus);
+}
+
+/**
+  * @brief  Gets the cuurent data transfer state.
+  * @param  None
+  * @retval SDTransferState: Data Transfer state.
+  *   This value can be: 
+  *        - SD_TRANSFER_OK: No data transfer is acting
+  *        - SD_TRANSFER_BUSY: Data transfer is acting
+  */
+	   
+	   SDTransferState SD_GetTransferState(void)
+	   {
+		   if (SDIO->STA & (SDIO_FLAG_TXACT | SDIO_FLAG_RXACT))
+		   {
+			   return(SD_TRANSFER_BUSY);
+		   }
+		   else
+		   {
+			   return(SD_TRANSFER_OK);
+		   }
+	   }
+	   
+	   
+/**
+  * @brief  Aborts an ongoing data transfer.
+  * @param  None
+  * @retval SD_Error: SD Card Error code.
+  */
+SD_Error SD_StopTransfer(void)
+{
+	SD_Error errorstatus = SD_OK;
+	
+	/*!< Send CMD12 STOP_TRANSMISSION  */
+	SDIO->ARG = OXO;
+	SDIO->CMD = 0X44C;
+	errorstatus = CmdResp1Error(SD_CMD_STOP_TRANSMISSION);
+	
+	return(errorstatus);
+}
+	   
+/**
+  * @brief  Allows to erase memory area specified for the given card.
+  * @param  startaddr: the start address.
+  * @param  endaddr: the end address.
+  * @retval SD_Error: SD Card Error code.
+  */
+SD_Error SD_Erase(uint32_t startaddr, uint32_t endaddr)
+{
+	SD_Error errorstatus = SD_OK;
+	uint32_t delay = 0;
+	__IO uint32_t maxdelay = 0;
+	uint8_t cardstate = 0;
+	
+	/*!< Check if the card coomnd class supports erase command */
+	if (((CSD_Tab[1] >> 20) & SD_CCCC_ERASE) == 0)
+	{
+		errorstatus = SD_REQUEST_NOT_APPLICABLE;
+		return(errorstatus);
+	}
+	
+	maxdelay = 120000 / ((SDIO->CLKCR & 0xFF) + 2);
+	
+	if (SDIO_GetResponse(SDIO_RESP1) & SD_CARD_LOCKED)
+	{
+		errorstatus = SD_LOCK_UNLOCK_FAILED;
+		return(errorstatus);
+	}
+	
+	if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+	{
+		startaddr /= 512;
+		endaddr /= 512;
+	}
+	
+	 /*!< According to sd-card spec 1.0 ERASE_GROUP_START (CMD32) and erase_group_end(CMD33) */
+	if ((SDIO_STD_CAPACITY_SD_CARD_V1_1 == CardType) || (SDIO_STD_CAPACITY_SD_CARD_V2_0 == CardType) || (SDIO_HIGH_CAPACITY_SD_CARD == CardType))
+	{
+		/*!< Send CMD32 SD_ERASE_GRP_START with argument as addr  */
+		SDIO_CmdInitStructure.SDIO_Argument = startaddr;
+    		SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SD_ERASE_GRP_START;
+    		SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;	//R1
+    		SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+    		SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+    		SDIO_SendCommand(&SDIO_CmdInitStructure);
+		
+		errorstatus = CmdResp1Error(SD_CMD_SD_ERASE_GRP_START);
+		if (errorstatus != SD_OK)
+		{
+			return(errorstatus);
+		}
+		
+		/*!< Send CMD33 SD_ERASE_GRP_END with argument as addr  */
+		SDIO_CmdInitStructure.SDIO_Argument = endaddr;
+    		SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SD_ERASE_GRP_END;
+    		SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+    		SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+    		SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+    		SDIO_SendCommand(&SDIO_CmdInitStructure);
+		
+		errorstatus = CmdResp1Error(SD_CMD_SD_ERASE_GRP_END);
+		if (errorstatus != SD_OK)
+		{
+			return(errorstatus);
+		}
+		
+	}
+	
+	        /*!< Send CMD38 ERASE */
+  		SDIO_CmdInitStructure.SDIO_Argument = 0;
+ 		SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_ERASE;
+ 		SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+  		SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+  		SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+  		SDIO_SendCommand(&SDIO_CmdInitStructure);
+
+  		errorstatus = CmdResp1Error(SD_CMD_ERASE);
+
+  		if (errorstatus != SD_OK)
+  		{
+    		return(errorstatus);
+  		}
+	
+		for (delay = 0; delay < maxdelay; delay++)
+		{}
+		
+		/*!< Wait till the card is in programming state */
+		errorstatus = IsCardProgramming(&cardstate);
+		
+		while ((errorstatus == SD_OK) && ((SD_CARD_PROGRAMMING == cardstate) || (SD_CARD_RECEIVING == cardstate)))
+		{
+			errorstatus = IsCardProgramming(&cardstate);
+		}
+		
+		return(errorstatus);
+}
+	  
+
+	   
+	   
+	   
